@@ -1,4 +1,5 @@
 import pygame
+import time
 pygame.init()
 fenetreLargeur =1280# 1720 #1280 
 fenetreHauteur = 720  #  1000 #720
@@ -78,10 +79,10 @@ class Morpion:
                     return False
         return True
     def minimax(self,is_maximizing):
-        winner = self.get_winner()
-        if winner == self.joueur2:
+        self.get_winner()
+        if self.winner == self.joueur2:
             return 1
-        elif winner == self.joueur1:
+        elif self.winner == self.joueur1:
             return -1
         elif self.isfull():
             return 0
@@ -139,14 +140,15 @@ class Menu_principal:
         self.human.draw()
         self.bot.draw()
 class Menu_game:
-    def __init__(self):
+    def __init__(self,ouvert=False,bot=False):
         self.tkt = 0
-        self.ouvert = False
+        self.ouvert = ouvert
         self.button = [Button(i * fenetreLargeur/3,j*fenetreHauteur/3,fenetreLargeur/3,fenetreHauteur/3) for j in range(3) for i in range(3)]
         self.button_restart = Button(fenetreLargeur/2-fenetreLargeur/20,fenetreHauteur/2-fenetreHauteur/20,fenetreLargeur/10,fenetreHauteur/10,"blue","Restart")
+        self.button_quit = Button(fenetreLargeur-fenetreLargeur/10,0,fenetreLargeur/10,40,"black","Quit")
         self.board = [["" for j in range(3)]for i in range(3)]
         self.running = True
-        self.bot = False
+        self.bot = bot
         self.joueur1 = "X"
         self.joueur2 = "O"
         self.winner = None
@@ -157,11 +159,20 @@ class Menu_game:
             pygame.draw.line(screen, (0,0,0), (i * (fenetreLargeur/3), 0), (i * (fenetreLargeur/3), fenetreHauteur), 5)
             # Ligne horizontale
             pygame.draw.line(screen, (0,0,0), (0, i * fenetreHauteur/3), (fenetreLargeur, i * (fenetreHauteur/3)), 5)
-            self.draw()
-            if self.winner != None:
-                winner = font.render(f"the winner is {self.winner}",True,"black")
-                screen.blit(winner,(fenetreLargeur/2-winner.get_width()/2,fenetreHauteur/2-winner.get_height()*2))
-                self.button_restart.draw()
+        self.draw()
+        self.button_quit.draw()
+        if self.bot and self.touractuelle == self.joueur2 and self.isfull() == False and time.monotonic()-self.time_bot > 0.3:
+            self.play(self.get_best_move())
+        if self.winner != None or self.isfull():
+            if self.winner == None:
+                text = "Draw"
+            elif self.winner == self.joueur1:
+                text = "The winner is player 1"
+            else:
+                text = "The winner is player 2"
+            text = font.render(text,True,"black")
+            screen.blit(text,(fenetreLargeur/2-text.get_width()/2,fenetreHauteur/2-text.get_height()*2))
+            self.button_restart.draw()
     def draw(self):
         for i in range(3):
             for j in range(3):
@@ -183,8 +194,7 @@ class Menu_game:
             
             self.touractuelle = self.joueur2 if self.touractuelle == self.joueur1 else self.joueur1
             self.get_winner()
-        if self.bot and self.touractuelle == self.joueur2 and self.isfull() == False:
-            self.play(self.get_best_move())
+            self.time_bot = time.monotonic()
             
         
     def game(self):
@@ -273,8 +283,7 @@ class Menu_game:
         self.winner = None
         return move
     def restart(self):
-        self.__init__()
-        self.ouvert = True
+        self.__init__(True,self.bot)
     
 menu_list = [Menu_principal(),Menu_game()]
 for button in menu_list[1].button:
@@ -298,11 +307,16 @@ while running:
                     menu_list[1].bot = True
 
             elif menu_list[1].ouvert == True:
-                    if menu_list[1].winner == None:
-                        for i in range(9):
-                            if menu_list[1].button[i].rect.collidepoint(pygame.mouse.get_pos()):
-                                menu_list[1].play(i)
-                                menu_list[1].draw()
+                    if menu_list[1].winner == None and menu_list[1].isfull() == False:
+                        if menu_list[1].button_quit.rect.collidepoint(pygame.mouse.get_pos()):
+                            menu_list[0].ouvert = True
+                            menu_list[1].__init__()
+                        else:
+                            for i in range(9):
+                                if menu_list[1].button[i].rect.collidepoint(pygame.mouse.get_pos()):
+                                    if menu_list[1].touractuelle == menu_list[1].joueur1 or menu_list[1].touractuelle == menu_list[1].joueur2 and menu_list[1].bot == False:
+                                        menu_list[1].play(i)
+                                        menu_list[1].draw()
                     else:
                         if menu_list[1].button_restart.rect.collidepoint(pygame.mouse.get_pos()):
                             menu_list[1].restart()
